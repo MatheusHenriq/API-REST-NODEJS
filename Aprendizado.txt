@@ -1,0 +1,134 @@
+Criar o arquivo e rodar um npm init -y
+Após isso, adicionar a dependencia do typescript npm i -D typescript
+
+Uma vez feito isso, ele vai criar uma pasta chamada node_modules, dentro dessa pasta terá uma outra pasta
+chamada .bin, com dois arquivos binários tsc e tsserver.
+
+Pra ativar o .ts de o comando npx tsc --init, e ele cria um arquivo tsconfig.json
+Esse arquivo tscongig.json tem um campo chamado "target", e por padrão bem es2016, pode mudar pra es2024,
+que é uma versão que dá suporte ao typescript.
+
+Uma vez o arquivo criado .ts, pra converter ele pra js dê o comando npx tsc src/index.ts(aqui vai o path do arquivo)
+Por que por padrão  o node não entende ts, só em js.
+
+Pra instalar o fastify, de o comando npm i fastify
+
+Como o node não foi construído com o typescript, quando a gnt usa o node com o tsm, é necessário instalar o pacote
+npm install -D @types/node como dependencia de desenvolvimento
+
+Como é algo incomodo ficar gerando a cada alteração um arquivo js, tem um pacote que faz isso pra gente:
+npm install tsx -D como uma dependencia de desenvolvimento.
+
+Pra rodar o arquivo server.ts, o comando seria agora npx tsx src/server.ts  ao invés de node src/server.js
+Em produção, o melhor caso ainda é converter pra js e rodar. o tsx é só pra ser usado em DEV
+
+pra comparar o tempo de execução, dê o comando time node src/server.js e time npx tsx src/server.ts e veja a diferença
+o.11s pra 0.59s 
+
+ESLint -> EcmaScript lint -> padronização de código
+npm i eslint -D
+o Eslint que tenho é de uma versão acima da 9, ou seja, ela não da suporte ao lint da rocketseat
+pra ativar o auto correct uma vez que o lint está errado, vamos precisar adicionar esses campos no settings user settings do vscode
+"editor.codeActionsOnSave": {
+        "source.fixAll.eslint": "explicit"
+    },
+    "eslint.validate": [
+        "javascript",
+        "javascriptreact",
+        "typescript",
+        "typescriptreact"
+    ],
+    "eslint.useFlatConfig": true, -> isso dá margem pra o arquivo eslint.config.js seja escrito daquela maneira
+    Configuração mais clara e concisa.
+    Apoio completo ao uso de módulos ES (import/export).
+    Estrutura mais fácil para gerenciamento de regras, especialmente para projetos mais complexos com várias configurações.
+    Melhor performance, pois a configuração é mais direta e não depende de arquivos adicionais como .eslintrc.
+
+Existem trÊs maneiras de usar banco de dados dentro do node, com drivers nativos, com query builders e com ORM
+o que vamos utilizar nesse primeiro módulo é o query builder, mais especificamente o knex.
+query builder faz buscas em banco de dados e uma forma mais abstrata, e tem suporte nativo a todos os bancos
+sem precisar trocar o código e o banco será o sqlite3
+
+Migrations serve para manter um histórico atualizado sobre todas as mudanças que ocorreram em um banco de dados
+similar ao que o git faz
+
+pra criar uma migration, de o comando npx knex migrate:make <nota da migration, ex: create-documents>
+não vai funcionar de primeira, pq o knex não sabe as configurações do nosso banco.
+pra isso, deve-se criar um knexfile.ts e exportar as configurações. o KNEX n entende ts, entao precisamos converter
+no package.json a gnt cria um run knex com essa configuração     "knex": "node --import tsx ./node_modules/.bin/knex"
+Isso faz com que o node rode o binário do knex e converta o ts pra js, fazendo com que ele funcione 
+npm run knex -- migrate:make create-documents   o comando faz criar a migration 
+
+o migrate cria um arquivo com duas funções, up e down,
+up é o que é construido
+down é o rollback, que desfaz o que o up construiu
+
+insira o código que quer do up e down, e pra criar a migrate, dê um npm run knex -- migrate:latest  
+Pra desfazer uma migration que não foi pra produção ainda, de um npm run knex -- migrate:rollback
+
+pra instalar o pacote dotenv, use o comapndo npm i dotenv, ele da marge pra importar o import 'dotenv/config';
+que tem um componente chamado process.env.NOME_DA_ENV definido no arquivo .env.
+
+Quando trabalhamos com .env, é importante fazer a verificação dos dados a serem inseridos. por isso o zod, uma biblioteca npm i zod é importante
+
+const envSchema = z.object({
+    DATABASE_URL: z.string(),
+    PORT: z.number().default(3333),
+    NODE_ENV: z.enum(['dev', 'stg', 'prd']).default('prd')
+});
+
+const _env = envSchema.safeParse(process.env);
+if (_env.success === false) {
+    console.error('💣Invalid enviroment variables!', _env.error.format());
+    throw new Error('Invalid enviroment variables!');
+}
+export const env = _env.data;
+ele cria um objeto e tipa, caso a env n esteja com os dados com o modelo certo, ele ta um throw de erro
+
+pra criar um plugin, crie uma arquivo .ts export async function transactionsRoutes(app: FastifyInstance) {
+    app.get('/hello', async () => {
+        const transaction = await setupKnex('transactions').select('*');
+        return transaction;
+    });
+}
+
+o fastify registra plugins assim app.register(transactionsRoutes);
+
+um plugin é interessante pq divide o código de uma forma mais módular, o fastify tbm exige que o plugin seja asyncrono
+
+O knex não entende os campos do banco de dados nativamente, então é necessário criar um arquivo knex.d.ts, que d é pra falar de tipos
+definição de tipos
+import { Knex } from 'knex';
+
+declare module 'knex/types/tables' {
+    export interface Tables {
+        transactions: {
+            id: string,
+            title: string,
+            type: string,
+            amount: number,
+            created_at: string,
+            session_id?: string,
+        },
+    }
+}
+
+
+Pra rodar testes, a gnt vai usar uma framework de testes chamadas vitest, pra instalar ela, de o comando 
+npm i vitest -D 
+Pra criar um test, import test e expect do vitest e pra rodar de o comando npx vitest
+npm i --save-dev @types/supertest
+
+npm i tsup -D é uma dependencia que auxilia na compilação do código ts em js pra poder gerar uma build via ele
+no package.json coloque esses comandos 
+tsup": {
+    "entry": [
+      "./src"
+    ],
+    "splitting": false,
+    "sourcemap": true,
+    "clean": true
+  },
+  "scripts": {
+    "build": "tsup ./src --out-dir build --format esm"
+  },
